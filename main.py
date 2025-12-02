@@ -1,6 +1,14 @@
+"""
+main.py
+--------
+This script launches a conversational command-line agent for managing tasks using Todoist and Gemini (Google Generative AI).
+It provides tools to add and show tasks, and maintains conversation history for context-aware responses.
+"""
+
 from dotenv import load_dotenv
 import os
 
+# Import necessary modules from LangChain and Todoist
 from langchain_core.messages import HumanMessage, AIMessage
 from langchain_core.output_parsers import StrOutputParser
 from langchain_core.prompts import ChatPromptTemplate, MessagesPlaceholder
@@ -9,7 +17,12 @@ from langchain.tools import tool
 from langchain.agents import create_openai_tools_agent, AgentExecutor
 from todoist_api_python.api import TodoistAPI
 
+# Load environment variables from .env file
 load_dotenv()
+
+# Retrieve API keys from environment variables
+# TODOIST_API_KEY: for Todoist task management
+# GEMINI_API_KEY: for Google Gemini LLM
 
 todoist_api_key = os.getenv("TODOIST_API_KEY")
 gemini_api_key = os.getenv("GEMINI_API_KEY")
@@ -37,12 +50,12 @@ def show_tasks():
             tasks.append(task.content)
     return tasks
 
+# List of available tools for the agent
 tools = [add_task, show_tasks]
 
 llm = ChatGoogleGenerativeAI(
     model="gemini-2.5-flash",
-    temperature=0.3, # to adjust model's creative behavior, 0 means more deterministic and less creative
-    # 1 means more creative
+    temperature=0.3, # Lower temperature = more deterministic, less creative
     google_api_key=gemini_api_key
 )
 
@@ -50,6 +63,7 @@ system_prompt = """You are a helpful assistant. You will help the user add tasks
 You will help the user show existing tasks. If user asks to show the tasks: for example, 'show all the tasks' print
 out the tasks to the user. Print them in a bullet list format"""
 
+# Define the chat prompt template with placeholders for history and agent scratchpad
 prompt = ChatPromptTemplate.from_messages([
     ("system", system_prompt),
     MessagesPlaceholder("history"),
