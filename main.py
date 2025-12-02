@@ -24,7 +24,20 @@ def add_task(task, description=None):
     """
     todoist.add_task(content=task, description=description)
 
-tools = [add_task]
+@tool
+def show_tasks():
+    """
+    Shows the user's current tasks. Use this when the user wants to see their task list.
+    :return:
+    """
+    results_paginator = todoist.get_tasks()
+    tasks = []
+    for task_list in results_paginator:
+        for task in task_list:
+            tasks.append(task.content)
+    return tasks
+
+tools = [add_task, show_tasks]
 
 llm = ChatGoogleGenerativeAI(
     model="gemini-2.5-flash",
@@ -33,13 +46,15 @@ llm = ChatGoogleGenerativeAI(
     google_api_key=gemini_api_key
 )
 
-system_prompt = "You are a task management assistant that helps users organize their tasks using Todoist."
-user_input = "add a new task to buy me a milk with the description to buy from the nearby store"
+system_prompt = """You are a helpful assistant. You will help the user add tasks. 
+You will help the user show existing tasks. If user asks to show the tasks: for example, 'show all the tasks' print
+out the tasks to the user. Print them in a bullet list format"""
 
 prompt = ChatPromptTemplate.from_messages([
     ("system", system_prompt),
-    ("user", user_input),
-    MessagesPlaceholder("agent_scratchpad")
+    MessagesPlaceholder("history"),
+    ("user", "{input}"),
+    MessagesPlaceholder("agent_scratchpad"),
 ])
 
 # chain = prompt | llm | StrOutputParser()
@@ -55,6 +70,13 @@ agent_executor = AgentExecutor(
     verbose=True)
 
 # response = chain.invoke({"input": user_input})
-response = agent_executor.invoke({"input": user_input})
+# response = agent_executor.invoke({"input": user_input})
 
-print(response)
+# print(response)
+history = []
+while True:
+    user_input = input("You: ")
+    response = agent_executor.invoke({"input": user_input, "history": history})
+    print(response)
+    history.append(HumanMessage(content=user_input))
+    history.append(AIMessage(content=response['output']))
